@@ -4,6 +4,37 @@
       #root {
         width: 100vw;
         height: 100vh;
+        position: relative; /* For positioning captions relative to the video */
+      }
+
+      /* Styling the captions overlay */
+      #captions {
+        display: none; /* Hide by default */
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        max-width: 80%;
+        text-align: center;
+        z-index: 10; /* Ensure it is above other elements */
+      }
+
+      #status {
+        display: none; /* Hide status by default */
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.7);
+        color: black;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 14px;
+        z-index: 10; /* Ensure it's visible */
       }
     </style>
   </head>
@@ -16,6 +47,8 @@
   <!-- Include Recorder.js via CDN -->
   <script>
     window.onload = function () {
+      let intervalID; // To store interval ID for stopping captions
+
       function getUrlParams(url) {
         let urlStr = url.split("?")[1];
         const urlSearchParams = new URLSearchParams(urlStr);
@@ -29,8 +62,8 @@
         Math.floor(Math.random() * 10000) + "";
       const userID = Math.floor(Math.random() * 10000) + "";
       const userName = "{{ name }}";
-      const appID = 284450372;
-      const serverSecret = "8921cb8144c70d0397255a8a3f419e8d";
+      const appID = 747635589;
+      const serverSecret = "f168a57eb7d255e51bb82a330aa18d8e";
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
         appID,
         serverSecret,
@@ -40,6 +73,8 @@
       );
 
       const zp = ZegoUIKitPrebuilt.create(kitToken);
+
+      // Configure join room options
       zp.joinRoom({
         container: document.querySelector("#root"),
         sharedLinks: [
@@ -57,7 +92,6 @@
         scenario: {
           mode: ZegoUIKitPrebuilt.VideoConference,
         },
-
         turnOnMicrophoneWhenJoining: false,
         turnOnCameraWhenJoining: false,
         showMyCameraToggleButton: true,
@@ -69,6 +103,18 @@
         maxUsers: 50,
         layout: "Grid",
         showLayoutButton: true,
+        onJoinRoom: () => {
+          // Show captions and status when in the meeting
+          document.getElementById("captions").style.display = "block";
+          document.getElementById("status").style.display = "block";
+          startRecording();
+        },
+        onLeaveRoom: () => {
+          // Hide captions and status after leaving the room
+          stopRecording();
+          document.getElementById("captions").style.display = "none";
+          document.getElementById("status").style.display = "none";
+        },
       });
 
       // Function to capture audio and send it to API
@@ -87,7 +133,7 @@
           recorder.record(); // Start recording
 
           // Capture audio and send to API every 5 seconds
-          setInterval(() => {
+          intervalID = setInterval(() => {
             recorder.exportWAV(async (blob) => {
               const formData = new FormData();
               formData.append("audio", blob, "recording.wav");
@@ -112,9 +158,8 @@
               // Display the result (captions) on the page
               if (result.recognized_text && result.translation_to_english) {
                 document.getElementById("captions").innerText =
-                  "Recognized Text: " +
                   result.recognized_text +
-                  "\nTranslation: " +
+                  " | Translation: " +
                   result.translation_to_english;
               } else {
                 document.getElementById("captions").innerText =
@@ -131,23 +176,22 @@
         }
       }
 
-      // Start recording when the page loads
-      startRecording();
+      // Function to stop recording
+      function stopRecording() {
+        if (intervalID) {
+          clearInterval(intervalID); // Stop the interval that captures audio
+          intervalID = null;
+          document.getElementById("captions").innerText = "Captions stopped.";
+        }
+      }
     };
   </script>
 
   <div id="root"></div>
 
   <!-- Captions will be shown here -->
-  <div id="captions" style="border: 1px solid black; padding: 10px">
-    Captions will appear here...
-  </div>
+  <div id="captions">Captions will appear here...</div>
 
   <!-- Status code will be shown here -->
-  <div
-    id="status"
-    style="border: 1px solid black; padding: 10px; margin-top: 10px"
-  >
-    API Status Code: N/A
-  </div>
+  <div id="status">API Status Code: N/A</div>
 </html>
