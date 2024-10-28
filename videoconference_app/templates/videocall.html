@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Call with Captions</title>
     <style>
+        /* Styles for positioning and displaying elements */
+
         #root {
+            /* The main container for the video call interface */
             width: 100vw;
             height: 100vh;
             position: relative;
         }
         #captions {
+            /* Box to display captions below the video interface */
             display: none;
             position: absolute;
             bottom: 10px;
@@ -26,6 +30,7 @@
             z-index: 10;
         }
         #status {
+            /* Box to display API status code at the top right */
             display: none;
             position: absolute;
             top: 10px;
@@ -38,6 +43,7 @@
             z-index: 10;
         }
         #toggleCaptions {
+            /* Button to start or stop captions */
             display: none;
             position: absolute;
             top: 10px;
@@ -56,27 +62,38 @@
     </style>
 </head>
 <body>
+    <!-- Root div where video call interface will be displayed -->
     <div id="root"></div>
+
+    <!-- Div to show real-time captions -->
     <div id="captions">Captions will appear here...</div>
+
+    <!-- Div to display API response status code -->
     <div id="status">API Status Code: N/A</div>
+
+    <!-- Button to start or stop captions -->
     <button id="toggleCaptions">Start Captions</button>
 
+    <!-- External JavaScript libraries for video conferencing and audio recording -->
     <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/recorderjs/0.1.0/recorder.js"></script>
+
     <script>
         window.onload = function () {
-            let intervalID;
-            let captionsActive = false;
-            let microphoneOn = false;
-            let microphoneButtonState = false;
+            // Variables for managing caption status, recording, and microphone state
+            let intervalID; // ID for controlling setInterval function
+            let captionsActive = false; // Tracks if captions are active
+            let microphoneButtonState = false; // Tracks microphone toggle state
 
             function updateMicrophoneState() {
+                // Function to update the microphone button state
                 const micButton = document.getElementById('ZegoRoomMicButton');
                 if (micButton) {
                     microphoneButtonState = !microphoneButtonState;
                     console.log("Microphone is " + (microphoneButtonState ? "on" : "off"));
 
                     if (!microphoneButtonState) {
+                        // If mic is off, stop recording and hide captions
                         stopRecording();
                         document.getElementById("captions").style.display = "none";
                         document.getElementById("toggleCaptions").innerText = "Start Captions";
@@ -86,74 +103,81 @@
             }
 
             function getUrlParams(url) {
+                // Parses the URL to retrieve roomID parameter
                 let urlStr = url.split("?")[1];
                 const urlSearchParams = new URLSearchParams(urlStr);
                 return Object.fromEntries(urlSearchParams.entries());
             }
 
+            // Generates or retrieves roomID from URL parameters for unique room sessions
             const roomID = getUrlParams(window.location.href)["roomID"] || Math.floor(Math.random() * 10000) + "";
-            const userID = Math.floor(Math.random() * 10000) + "";
-            const userName = "{{ name }}";
-            const appID = 147383766;
-            const serverSecret = "a9d5b4e3a3c0aa38c608558cbad55bc7";
+            const userID = Math.floor(Math.random() * 10000) + ""; // Generates random userID
+            const userName = "{{ name }}"; // Placeholder for user name
+            const appID = 147383766; // Zego Cloud app ID
+            const serverSecret = "a9d5b4e3a3c0aa38c608558cbad55bc7"; // Server secret for authentication
             const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(appID, serverSecret, roomID, userID, userName);
 
+            // Initializes Zego UI Kit for video conferencing
             const zp = ZegoUIKitPrebuilt.create(kitToken);
             zp.joinRoom({
-                container: document.querySelector("#root"),
+                container: document.querySelector("#root"), // Attaches video call to root div
                 sharedLinks: [{
                     name: "Personal link",
                     url: window.location.protocol + "//" + window.location.host + window.location.pathname + "?roomID=" + roomID,
                 }],
                 scenario: {
-                    mode: ZegoUIKitPrebuilt.VideoConference,
+                    mode: ZegoUIKitPrebuilt.VideoConference, // Sets video conference mode
                 },
-                turnOnMicrophoneWhenJoining: false,
-                turnOnCameraWhenJoining: false,
+                turnOnMicrophoneWhenJoining: false, // Microphone off initially
+                turnOnCameraWhenJoining: false, // Camera off initially
                 showMyCameraToggleButton: true,
                 showMyMicrophoneToggleButton: true,
                 showAudioVideoSettingsButton: true,
                 showScreenSharingButton: true,
                 showTextChat: true,
                 showUserList: true,
-                maxUsers: 50,
-                layout: "Grid",
+                maxUsers: 50, // Max users for the room
+                layout: "Grid", // Layout style for participants
                 showLayoutButton: true,
                 onJoinRoom: () => {
-                    document.getElementById("status").style.display = "block";
-                    document.getElementById("toggleCaptions").style.display = "block";
-                    const micButton = document.getElementById('ZegoRoomMicButton');
+                    // Actions to take after joining room
+                    document.getElementById("status").style.display = "block"; // Show API status box
+                    document.getElementById("toggleCaptions").style.display = "block"; // Show captions button
+                    const micButton = document.getElementById('ZegoRoomMicButton'); // Microphone button
                     if (micButton) {
-                        micButton.addEventListener('click', updateMicrophoneState);
+                        micButton.addEventListener('click', updateMicrophoneState); // Toggle microphone state
                     }
                 },
                 onLeaveRoom: () => {
+                    // Actions on leaving the room
                     stopRecording();
-                    document.getElementById("captions").style.display = "none";
-                    document.getElementById("status").style.display = "none";
-                    document.getElementById("toggleCaptions").style.display = "none";
+                    document.getElementById("captions").style.display = "none"; // Hide captions
+                    document.getElementById("status").style.display = "none"; // Hide API status
+                    document.getElementById("toggleCaptions").style.display = "none"; // Hide captions button
                 },
             });
 
             document.getElementById("toggleCaptions").addEventListener("click", async () => {
+                // Event listener for starting and stopping captions
                 if (microphoneButtonState) {
                     if (!captionsActive) {
-                        document.getElementById("captions").style.display = "block";
-                        await startRecording();
+                        document.getElementById("captions").style.display = "block"; // Show captions box
+                        await startRecording(); // Start recording and processing
                         document.getElementById("toggleCaptions").innerText = "Stop Captions";
                         captionsActive = true;
                     } else {
-                        stopRecording();
-                        document.getElementById("captions").style.display = "none";
+                        stopRecording(); // Stop recording when toggled off
+                        document.getElementById("captions").style.display = "none"; // Hide captions
                         document.getElementById("toggleCaptions").innerText = "Start Captions";
                         captionsActive = false;
                     }
                 } else {
-                    alert("Please turn on the microphone before starting captions.");
+                    alert("Please turn on the microphone before starting captions."); // Warn if mic is off
                 }
             });
 
             async function startRecording() {
+                // Starts recording audio and sends audio to API for transcription and translation
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -162,41 +186,46 @@
                     recorder.record();
 
                     intervalID = setInterval(() => {
+                        // Sends recorded audio to API every 5 seconds
                         recorder.exportWAV(async (blob) => {
                             const formData = new FormData();
                             formData.append("audio", blob, "recording.wav");
-                            formData.append("language", "bn");
+                            formData.append("language", "bn"); // Bengali language code
 
                             const response = await fetch("https://caption-gen-b2439bd35fb0.herokuapp.com/recognize_translate", {
                                 method: "POST",
                                 body: formData,
                             });
 
-                            const result = await response.json();
+                            const result = await response.json(); // Parses API response
                             const statusCode = response.status;
                             document.getElementById("status").innerText = `API Status Code: ${statusCode}`;
 
-                            console.log(result);
-
                             if (result.recognized_text && result.translation_to_english) {
+                                // Display recognized and translated text
                                 document.getElementById("captions").innerText = 
                                     result.recognized_text + " | Translation: " + result.translation_to_english;
                             } else {
                                 document.getElementById("captions").innerText = "No captions available";
                             }
 
-                            recorder.clear();
+                            recorder.clear(); // Clears recording buffer after each interval
                         });
                     }, 5000);
 
                     return stream;
                 } catch (error) {
-                    console.error("Error starting recording:", error);
+                    console.error("Error starting recording:", error); // Logs any errors
                 }
             }
 
             function stopRecording() {
+                // Stops recording and clears interval for sending audio to API
                 clearInterval(intervalID);
+                if (recorder) {
+                    recorder.stop();
+                    recorder.clear();
+                }
             }
         };
     </script>
